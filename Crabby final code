@@ -1,0 +1,354 @@
+#include <Adafruit_NeoPixel.h>
+
+#define UPDATES_PER_SECOND 100
+#define NUM_STRIPS   10       // Numero di strisce LED
+#define LEDS_PER_STRIP 12     // Numero di LED per ogni striscia
+
+const int pingPin = 12;
+const int echoPin = 13;
+
+// distance limits
+const int Max_Dist = 150;   // Maximum distance for SAFE MODE
+const int Trs_Dist = 150;   // Treshold distance changing the mode of the cylinder
+const int Limit_Dist = 1;
+
+// time mngmt
+int TimeWave = 0; 
+int TimeCrab = 0;					//time of delay for the refresh of the cycle
+int TimeCycle = 1;   //time of cycle
+int TimeTargetWave = 5;  //time to reach to get the crab animated
+int TimeTargetCrab = 10;  //time to reach to get the crab animated
+int TimeCounter = 0;
+
+int v1 = 1;
+int v2 = 3;
+int v3 = 5;
+int stop = 100;		//tempo di attesa quando si passa da ZONA A a ZONA B
+
+// variables for distance treshold
+int d4 = 170; //150
+int d3 = 130; //120
+int d2 = 100;  //70
+int d1 = 60;  // 40
+int d0 = 1;    
+
+int a3_wave = 3;
+int a2_wave = 4;
+int a1_wave = 5;
+
+int a3_counter = 0;
+int a2_counter = 0;
+int a1_counter = 0;
+
+int ZoneCounter = 0;
+
+int WaveCounter = 0;
+int WaveIncrease = 5;
+bool increasing = true;
+
+int WaveCounterMin = 100;
+
+int WaveCounterMax = 0;
+
+int StartWave = 4;		//n Led starting the wave
+int FinishWave = 5;		//n Led finishing the wave
+int FinishWaveStart = 5;	//n Led finishing the wave to put the condition with
+// Definisci un array di pin per le quattro strisce LED
+int ledPins[NUM_STRIPS] = {2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
+int Cycle = 0;
+int WaveX = 0;
+int CrabX = 0;
+
+Adafruit_NeoPixel strips[NUM_STRIPS];  // Crea un array di oggetti NeoPixel per ogni striscia
+
+void setup() 
+{
+  for (int i = 0; i < NUM_STRIPS; i++) 
+  {
+    strips[i] = Adafruit_NeoPixel(LEDS_PER_STRIP, ledPins[i], NEO_GRB + NEO_KHZ800);
+    strips[i].begin();
+    strips[i].show();  // Inizializza tutti i LED spenti
+  }
+
+  for (int i = 0; i < NUM_STRIPS; i++) 
+  {
+    for (int j = 0; j < LEDS_PER_STRIP; j++) 
+    { // Turn on the first 3 LEDs for odd-numbered strips
+      strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+      strips[i].show();
+    }
+  }  
+  randomSeed(analogRead(0));
+  Serial.begin(9600);
+}
+
+void loop()
+{
+   long duration, cm;
+   pinMode(pingPin, OUTPUT);
+   digitalWrite(pingPin, LOW);
+   delayMicroseconds(2);
+   digitalWrite(pingPin, HIGH);
+   delayMicroseconds(10);
+   digitalWrite(pingPin, LOW);
+   pinMode(echoPin, INPUT);
+   duration = pulseIn(echoPin, HIGH);
+   cm = microsecondsToCentimeters(duration);
+   //Serial.print(cm);
+   //Serial.print("cm");
+  // Serial.println();
+  //HIDE MODE  
+
+  Serial.println (cm);
+
+    if(increasing)
+    {
+      WaveCounter += WaveIncrease;
+      if (WaveCounter >= 100)
+      {
+        WaveCounter = 100;
+        increasing = false;
+      }
+    }
+    else
+    {
+      WaveCounter -= WaveIncrease;
+      if (WaveCounter <=0)
+      {
+        WaveCounter = 0;
+        increasing = true;
+      }
+    }
+
+  int g_R_V = map(cm, Limit_Dist, Max_Dist, 0, 100);  // Red Value Min Max 100<x<300cm
+  int g_G_V = map(cm, Limit_Dist, Max_Dist, 0, 150);	 // Green Value Min Max 100<x<300cm
+  int g_B_V = map(cm, Limit_Dist, Max_Dist, 255, 242);	 // Blue Value Min Max 100<x<300cm
+
+  int g_R_V_wave = map(WaveCounter, WaveCounterMin, WaveCounterMax, 0, 150);  // Red Value Min Max 100<x<300cm
+  int g_G_V_wave = map(WaveCounter, WaveCounterMin, WaveCounterMax, 0, 255);	 // Green Value Min Max 100<x<300cm
+  int g_B_V_wave = map(WaveCounter, WaveCounterMin, WaveCounterMax, 0, 242);	 // Blue Value Min Max 100<x<300cm
+
+
+  if (cm <= d4)
+  {   
+ 
+
+
+        if (TimeCrab >= TimeCounter)
+        {
+          CrabX++;
+          TimeCrab = 0;  
+        }
+
+        TimeCounter = 0;
+// if the person is in A3 |--
+        if (cm <= d4 && cm > d3)
+        {	
+              
+          // turn off all the leds a part from what we're using
+          for(int i = 0; i < CrabX; i++)    
+          {
+            for(int j = a3_wave; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }         
+          }
+        for(int i = CrabX+1; i < NUM_STRIPS; i++)    
+          {
+            for(int j = a3_wave; j < LEDS_PER_STRIP; j++)
+             {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+             }
+          }
+          for(int i = CrabX; i < CrabX; i++)    
+          {
+            for(int j = a3_wave +2; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }
+          }
+          
+    // turn on the wave BLUE
+          for (int i = 0; i < NUM_STRIPS; i++) 
+          {
+            for (int j = 0; j < a3_wave; j++) 
+            { // Turn on the first 3 LEDs for odd-numbered strips
+                strips[i].setPixelColor(j, strips[i].Color(g_R_V, g_G_V, g_B_V)); // Colore rosso
+                strips[i].show();
+            }
+          }
+
+    // turn on the crabX
+           for (int j = a3_wave; j < a3_wave+2; j++) 
+        {
+            strips[CrabX].setPixelColor(j, strips[CrabX].Color(255, 0, 0)); 
+        }
+        strips[CrabX].show();
+
+                  ZoneCounter = a3_wave;
+
+        }
+        ZoneCounter = 0;
+        ZoneCounter = a3_wave;
+        TimeCounter = v3;
+// if the person is in A2 -|-
+
+        if (cm <= d3 && cm > d2)
+        {
+    
+              // turn off all the leds a part from what we're using
+          for(int i = 0; i < CrabX; i++)    
+          {
+            for(int j = a2_wave; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }         
+          }
+        for(int i = CrabX+1; i < NUM_STRIPS; i++)    
+          {
+            for(int j = a2_wave; j < LEDS_PER_STRIP; j++)
+             {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+             }
+          }
+          for(int i = CrabX; i < CrabX; i++)    
+          {
+            for(int j = a2_wave +2; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }
+          }
+          
+      // turn on the wave BLUE
+            for (int i = 0; i < NUM_STRIPS; i++) 
+            {
+              for (int j = 0; j < a2_wave; j++) 
+              { // Turn on the first 3 LEDs for odd-numbered strips
+                strips[i].setPixelColor(j, strips[i].Color(g_R_V, g_G_V, g_B_V)); // Colore rosso
+                strips[i].show();
+              }
+            }
+
+        for (int j = a2_wave; j < a2_wave+2; j++) 
+        {
+            strips[CrabX].setPixelColor(j, strips[CrabX].Color(255, 0, 0)); 
+        }
+        strips[CrabX].show();
+            
+        ZoneCounter = 0;
+        ZoneCounter = a2_wave;
+        TimeCounter = v2;
+        }
+// if the person is in A1 --|
+
+        if (cm <= d2 && cm >= d1)
+        {
+                     // turn oFF the wave BLUE
+          // turn off all the leds a part from what we're using
+          for(int i = 0; i < CrabX; i++)    
+          {
+            for(int j = a1_wave; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }         
+          }
+        for(int i = CrabX+1; i < NUM_STRIPS; i++)    
+          {
+            for(int j = a1_wave; j < LEDS_PER_STRIP; j++)
+             {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+             }
+          }
+          for(int i = CrabX; i < CrabX; i++)    
+          {
+            for(int j = a1_wave +2; j < LEDS_PER_STRIP; j++)
+            {
+            strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+            strips[i].show();
+            }
+          }
+          
+      // turn on the wave BLUE
+            for (int i = 0; i < NUM_STRIPS; i++) 
+            {
+              for (int j = 0; j < a1_wave; j++) 
+              { // Turn on the first 3 LEDs for odd-numbered strips
+                  strips[i].setPixelColor(j, strips[i].Color(g_R_V, g_G_V, g_B_V)); // Colore rosso
+                  strips[i].show();
+              }
+            }
+
+        for (int j = a1_wave; j < a1_wave+2; j++) 
+        {
+            strips[CrabX].setPixelColor(j, strips[CrabX].Color(255, 0, 0)); 
+        }
+        strips[CrabX].show();
+                    
+                    
+                    
+                    ZoneCounter = 0;
+                    ZoneCounter = a1_wave;
+                            TimeCounter = v1;
+
+
+        }
+      TimeCrab ++;
+      if (CrabX == NUM_STRIPS)
+      {
+        CrabX=0;
+      }
+
+      if (cm <= d1 && cm > d0)
+      {
+        for (int stripIndex = 0; stripIndex < NUM_STRIPS; stripIndex++) {
+           for (int i = 0; i < LEDS_PER_STRIP; i++) {
+            uint32_t BLUE = strips[stripIndex].Color(0, 0, 255); // Definisci il colore blu
+            uint32_t ROSSO = strips[stripIndex].Color(255, 0, 0); // Definisci il colore rosso
+
+            if (random(100) < 1) { // 10% di probabilità di cambiare in celeste
+              strips[stripIndex].setPixelColor(i, ROSSO);
+            } else {
+              strips[stripIndex].setPixelColor(i, BLUE);
+             }
+    }
+    strips[stripIndex].show();
+  }
+  delay (300);
+  ZoneCounter = 0;
+
+      }
+  }
+  else
+  {
+        for (int i = 0; i < NUM_STRIPS; i++) 
+        {
+          for (int j = 2; j < LEDS_PER_STRIP; j++) 
+          { // Turn on the first 3 LEDs for odd-numbered strips
+              strips[i].setPixelColor(j, strips[i].Color(0, 0, 0)); // Colore rosso
+              strips[i].show();
+          }
+        }  
+        for (int i = 0; i < NUM_STRIPS; i++) 
+        {
+          for (int j = 0; j < 2; j++) 
+          { // Turn on the first 3 LEDs for odd-numbered strips
+              strips[i].setPixelColor(j, strips[i].Color(g_R_V_wave, g_G_V_wave, g_B_V_wave)); // Colore rosso
+              strips[i].show();
+          }
+        }  
+  }
+    
+}
+
+long microsecondsToCentimeters(long microseconds) 
+{
+   return microseconds / 29 / 2;
+}
